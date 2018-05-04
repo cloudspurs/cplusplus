@@ -1,3 +1,0 @@
-thread11: thread11.cpp
-	g++ -std=c++11 -pthread thread11.cpp -o thread11
-
