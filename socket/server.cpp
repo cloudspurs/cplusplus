@@ -1,67 +1,87 @@
+#include <arpa/inet.h>
+#include <ctype.h>
+#include <netinet/in.h>
 #include <sys/types.h>      
 #include <sys/socket.h>
-#include <arpa/inet.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <netinet/in.h>
 #include <unistd.h>
-#include <ctype.h>
 
 #include <iostream>
 #include <string>
 
 using namespace std;
 
-#define SERVER_PORT 8000
-#define MAXLINE 4096
+const int SERVER_PORT = 8000;
+const int BUF_SIZE = 4096;
+const int ERROR = -1; 
+
+// 消息处理
+void process(char*);
 
 int main() {
-
-    struct sockaddr_in serveraddr, clientaddr;
-    char ipstr[128];
-    char buf[MAXLINE];
-
-    // 1.socket
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    // 1.init socket
+	int server_socket;
+    if((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == ERROR) {
+		perror("init socket error ");
+		exit(1);	
+	}
 
     // 2.bind
-    bzero(&serveraddr, sizeof(serveraddr));
-    /* 地址族协议IPv4 */
-    serveraddr.sin_family = AF_INET;
-    /* IP地址 */
-    serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serveraddr.sin_port = htons(SERVER_PORT);
-    bind(sockfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr));
+    struct sockaddr_in server;
+//    bzero(&server, sizeof(server));
+	memset(&server, 0, sizeof(server));
+    /* 设置地址族协议类型(IPv4), IP, PORT */
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = htonl(INADDR_ANY);
+    server.sin_port = htons(SERVER_PORT);
+    if(bind(server_socket, (struct sockaddr*)&server, sizeof(server)) == ERROR) {
+		perror("bind socket error ");
+		exit(1);
+	}
 
     // 3.listen
-    listen(sockfd, 128);
+    if(listen(server_socket, 128) == ERROR) {
+		perror("listen socket error ");
+		exit(1);
+	}
 
     while(1) {
         // 4.accept阻塞监听客户端链接请求
-        socklen_t addrlen = sizeof(clientaddr);
-        int confd = accept(sockfd, (struct sockaddr*)&clientaddr, &addrlen);//返回的是客户端和服务端专用通道的socket描述符
+    	struct sockaddr_in client;
+        socklen_t addrlen = sizeof(client);
+        int connect_socket = accept(server_socket, (struct sockaddr*)&client, &addrlen);//返回的是客户端和服务端专用通道的server_socket描述符
 
         // 输出客户端IP地址和端口号
-        string client_ip = inet_ntop(AF_INET, &clientaddr.sin_addr.s_addr, ipstr, sizeof(ipstr));
-		int client_port = ntohs(clientaddr.sin_port);
+    	char client_ip[128];
+        inet_ntop(AF_INET, &client.sin_addr.s_addr, client_ip, sizeof(client_ip));
+//        string client_ip = inet_ntop(AF_INET, &client.sin_addr.s_addr, ipstr, sizeof(ipstr));
+		int client_port = ntohs(client.sin_port);
 		cout << "Client IP " << client_ip << " Port " << client_port << endl;
 
-        // 和客户端交互数据操作confd
+        // 和客户端交互数据操作connect_socket
         // 5.处理客户端请求 
-        int len = read(confd, buf, sizeof(buf));
-        int i = 0;
-        while(i < len) {
-            buf[i] = toupper(buf[i]);
-            i++;
-        }
-        write(confd, buf, len);
+    	char buf[BUF_SIZE];
+        int len = read(connect_socket, buf, sizeof(buf));
 
-        close(confd);
+		cout << "Get Message: " << buf << endl;
+	
+		process(buf);
+
+        write(connect_socket, buf, len);
+
+        close(connect_socket);
     }
 
-    close(sockfd);
+    close(server_socket);
 
     return 0;
+}
+
+void process(char* message) {
+	for(int i = 0; i < sizeof(message); i++)
+		message[i] = toupper(message[i]);
 }
 

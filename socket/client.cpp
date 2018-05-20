@@ -15,32 +15,36 @@
 #define MAXLINE 4096
 
 int main(int argc, char* argv[]) {
-    struct sockaddr_in serveraddr;
-    char ipstr[] = "127.0.0.1";
-    char buf[MAXLINE];
+    struct sockaddr_in server;
     if (argc < 2) {
         printf("./client str\n");
         exit(1);
     }
+
     // 1.创建一个socket
     int confd = socket(AF_INET, SOCK_STREAM, 0);
+
     // 2.初始化服务器地址
-    bzero(&serveraddr, sizeof(serveraddr));
-    serveraddr.sin_family = AF_INET;
-    // "192.168.6.254"
-    inet_pton(AF_INET, ipstr, &serveraddr.sin_addr.s_addr);
-    serveraddr.sin_port  = htons(SERVER_PORT);
-    // 3.链接服务器
-    connect(confd, (struct sockaddr *)&serveraddr, sizeof(serveraddr));
+    bzero(&server, sizeof(server));
+    server.sin_family = AF_INET;
+    char ipstr[] = "127.0.0.1";
+    inet_pton(AF_INET, ipstr, &server.sin_addr.s_addr);
+    server.sin_port  = htons(SERVER_PORT);
+
+    // 3.连接服务器
+    connect(confd, (struct sockaddr*)&server, sizeof(server));
 
     // 4.请求服务器处理数据
     write(confd, argv[1], strlen(argv[1]));
+    char buf[MAXLINE];
     int len = read(confd, buf, sizeof(buf));
     write(STDOUT_FILENO, buf, len);
-	std::cout << std::endl;
 
     // 5.关闭socket
     close(confd);
+
+	std::cout << std::endl;
+
     return 0;
 }
 
