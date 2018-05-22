@@ -2,7 +2,7 @@ all:server client
 
 
 server:server.cpp
-	g++ $< -o $@
+	g++ $< -std=c++11 -pthread -o $@
 
 client:client.cpp
 	g++ $< -o $@

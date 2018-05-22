@@ -11,6 +11,7 @@
 
 #include <iostream>
 #include <string>
+#include <thread>
 
 using namespace std;
 
@@ -53,6 +54,10 @@ int main() {
     	struct sockaddr_in client;
         socklen_t addrlen = sizeof(client);
         int connect_socket = accept(server_socket, (struct sockaddr*)&client, &addrlen);//返回的是客户端和服务端专用通道的server_socket描述符
+        if(connect_socket == ERROR) {
+            perror("accept socket error ");
+            continue;
+        }
 
         // 输出客户端IP地址和端口号
     	char client_ip[128];
@@ -65,10 +70,18 @@ int main() {
         // 5.处理客户端请求 
     	char buf[BUF_SIZE];
         int len = read(connect_socket, buf, sizeof(buf));
+        buf[len] = '\0';
 
-		cout << "Get Message: " << buf << endl;
+		cout << "Get Message \"" << buf << "\" from " << client_ip << endl;
 	
-		process(buf);
+        cout << "New Thread to process Client message!" << endl;
+//		process(buf);
+
+        thread t(process, buf);
+   
+//        string message = string(buf);
+//        thread t(process, message);
+        t.join();
 
         write(connect_socket, buf, len);
 
